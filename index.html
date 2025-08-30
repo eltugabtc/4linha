@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jogo do 4 em Linha</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f0f0f0;
+            margin: 0;
+            min-height: 100vh;
+        }
+        h1 {
+            color: #333;
+            font-size: 36px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        #start-screen, #game-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #start-screen {
+            display: flex;
+        }
+        #game-screen {
+            display: none;
+            background-image: url('background.jpg');
+            background-size: cover;
+            background-position: center;
+            padding: 20px;
+            border-radius: 10px;
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            box-sizing: border-box;
+        }
+        #board {
+            display: grid;
+            grid-template-columns: repeat(7, 60px);
+            gap: 5px;
+            background-color: blue;
+            padding: 10px;
+            border-radius: 10px;
+            position: relative;
+        }
+        .cell {
+            width: 60px;
+            height: 60px;
+            background-color: white;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        .cell.red {
+            background-color: red;
+        }
+        .cell.yellow {
+            background-color: yellow;
+        }
+        .falling {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            pointer-events: none;
+            animation: fall 0.5s ease-in forwards;
+        }
+        @keyframes fall {
+            from {
+                transform: translateY(-360px);
+            }
+            to {
+                transform: translateY(0);
+            }
+        }
+        #status {
+            font-size: 24px;
+            margin: 20px 0;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            font-weight: bold;
+        }
+        #victory-message {
+            font-size: 36px;
+            color: #ffd700;
+            background: linear-gradient(45deg, #ff4444, #ffbb33);
+            padding: 20px;
+            border-radius: 10px;
+            text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.7);
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.8);
+            border: 3px solid #fff;
+            text-align: center;
+            animation: pulse 1.5s infinite;
+            margin: 20px 0;
+        }
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.1);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 18px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        input {
+            padding: 10px;
+            font-size: 16px;
+            margin: 10px;
+            width: 200px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+        label {
+            font-size: 18px;
+            margin: 5px;
+        }
+        #victory-video {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            object-fit: cover;
+            z-index: 1000;
+        }
+        #close-video {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            font-size: 18px;
+            cursor: pointer;
+            background-color: #ff4444;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            z-index: 1001;
+        }
+        #close-video:hover {
+            background-color: #cc0000;
+        }
+    </style>
+</head>
+<body>
+    <h1>🤯 4 em Linha só para Einsteins Supremos 🤯</h1>
+    <div id="start-screen">
+        <label for="player1">Nome do Jogador 1 (Vermelho):</label>
+        <input type="text" id="player1" placeholder="Jogador 1">
+        <label for="player2">Nome do Jogador 2 (Amarelo):</label>
+        <input type="text" id="player2" placeholder="Jogador 2">
+        <button onclick="startGame()">Iniciar Jogo</button>
+    </div>
+    <div id="game-screen">
+        <div id="status">Aguardando início...</div>
+        <div id="victory-message" style="display: none;"></div>
+        <div id="board"></div>
+        <button onclick="resetGame()">Reiniciar Jogo</button>
+        <button onclick="backToStart()">Voltar ao Início</button>
+    </div>
+    <video id="victory-video" src="fireworks.mp4" autoplay></video>
+    <button id="close-video" style="display: none;" onclick="closeVideo()">Fechar Vídeo</button>
+
+    <script>
+        let board = [];
+        const rows = 6;
+        const cols = 7;
+        let currentPlayer = 'red';
+        let gameOver = false;
+        let player1Name = '';
+        let player2Name = '';
+
+        // Iniciar o jogo
+        function startGame() {
+            player1Name = document.getElementById('player1').value || 'Jogador 1';
+            player2Name = document.getElementById('player2').value || 'Jogador 2';
+            board = [];
+            currentPlayer = 'red';
+            gameOver = false;
+            document.getElementById('start-screen').style.display = 'none';
+            document.getElementById('game-screen').style.display = 'flex';
+            document.getElementById('status').textContent = `Vez de ${player1Name} (Vermelho)`;
+            document.getElementById('victory-message').style.display = 'none';
+            createBoard();
+        }
+
+        // Criar o tabuleiro
+        function createBoard() {
+            const boardDiv = document.getElementById('board');
+            boardDiv.innerHTML = '';
+            for (let row = 0; row < rows; row++) {
+                board[row] = [];
+                for (let col = 0; col < cols; col++) {
+                    board[row][col] = null;
+                    const cell = document.createElement('div');
+                    cell.classList.add('cell');
+                    cell.dataset.row = row;
+                    cell.dataset.col = col;
+                    cell.addEventListener('click', () => handleClick(col));
+                    boardDiv.appendChild(cell);
+                }
+            }
+        }
+
+        // Lidar com o clique na coluna
+        function handleClick(col) {
+            if (gameOver) return;
+            for (let row = rows - 1; row >= 0; row--) {
+                if (!board[row][col]) {
+                    board[row][col] = currentPlayer;
+                    animateFall(row, col);
+                    break;
+                }
+            }
+        }
+
+        // Animação de queda
+        function animateFall(row, col) {
+            const boardDiv = document.getElementById('board');
+            const cell = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
+            const fallingPiece = document.createElement('div');
+            fallingPiece.classList.add('falling', currentPlayer);
+            const cellRect = cell.getBoundingClientRect();
+            const boardRect = boardDiv.getBoundingClientRect();
+            fallingPiece.style.left = `${cellRect.left - boardRect.left}px`;
+            fallingPiece.style.top = `${cellRect.top - boardRect.top}px`;
+            boardDiv.appendChild(fallingPiece);
+
+            setTimeout(() => {
+                cell.classList.add(currentPlayer);
+                fallingPiece.remove();
+                if (checkWin(row, col)) {
+                    const winner = currentPlayer === 'red' ? player1Name : player2Name;
+                    document.getElementById('status').style.display = 'none';
+                    document.getElementById('victory-message').style.display = 'block';
+                    document.getElementById('victory-message').textContent = `🎉 PARABÉNS, ${winner}! VOCÊ É O SUPREMO CAMPEÃO DO 4 EM LINHA! 🏆`;
+                    gameOver = true;
+                    showVictoryVideo();
+                    return;
+                }
+                if (checkDraw()) {
+                    document.getElementById('status').textContent = 'Empate!';
+                    gameOver = true;
+                    return;
+                }
+                currentPlayer = currentPlayer === 'red' ? 'yellow' : 'red';
+                document.getElementById('status').textContent = `Vez de ${currentPlayer === 'red' ? player1Name : player2Name} (${currentPlayer})`;
+            }, 500); // Tempo da animação de queda (0.5s)
+        }
+
+        // Reproduzir vídeo de vitória
+        function showVictoryVideo() {
+            const video = document.getElementById('victory-video');
+            const closeButton = document.getElementById('close-video');
+            video.style.display = 'block';
+            closeButton.style.display = 'block';
+            video.play();
+        }
+
+        // Fechar vídeo
+        function closeVideo() {
+            const video = document.getElementById('victory-video');
+            const closeButton = document.getElementById('close-video');
+            video.pause();
+            video.currentTime = 0;
+            video.style.display = 'none';
+            closeButton.style.display = 'none';
+        }
+
+        // Verificar vitória
+        function checkWin(row, col) {
+            const directions = [
+                [0, 1],  // horizontal
+                [1, 0],  // vertical
+                [1, 1],  // diagonal /
+                [1, -1]  // diagonal \
+            ];
+            for (let [dr, dc] of directions) {
+                let count = 1;
+                for (let i = 1; i <= 3; i++) {
+                    let r = row + i * dr;
+                    let c = col + i * dc;
+                    if (r >= 0 && r < rows && c >= 0 && c < cols && board[r][c] === currentPlayer) {
+                        count++;
+                    } else {
+                        break;
+                    }
+                }
+                for (let i = 1; i <= 3; i++) {
+                    let r = row - i * dr;
+                    let c = col - i * dc;
+                    if (r >= 0 && r < rows && c >= 0 && c < cols && board[r][c] === currentPlayer) {
+                        count++;
+                    } else {
+                        break;
+                    }
+                }
+                if (count >= 4) return true;
+            }
+            return false;
+        }
+
+        // Verificar empate
+        function checkDraw() {
+            return board.every(row => row.every(cell => cell !== null));
+        }
+
+        // Reiniciar o jogo
+        function resetGame() {
+            currentPlayer = 'red';
+            gameOver = false;
+            board = [];
+            document.getElementById('status').style.display = 'block';
+            document.getElementById('victory-message').style.display = 'none';
+            document.getElementById('status').textContent = `Vez de ${player1Name} (Vermelho)`;
+            createBoard();
+        }
+
+        // Voltar ao início
+        function backToStart() {
+            document.getElementById('game-screen').style.display = 'none';
+            document.getElementById('start-screen').style.display = 'flex';
+            document.getElementById('player1').value = '';
+            document.getElementById('player2').value = '';
+            board = [];
+            currentPlayer = 'red';
+            gameOver = false;
+            document.getElementById('status').style.display = 'block';
+            document.getElementById('victory-message').style.display = 'none';
+        }
+    </script>
+</body>
+</html>

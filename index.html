@@ -27,6 +27,13 @@
         }
         #start-screen {
             display: flex;
+            background-image: url('background.jpg');
+            background-size: cover;
+            background-position: center;
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            box-sizing: border-box;
         }
         #game-screen {
             display: none;
@@ -62,22 +69,6 @@
         .cell.yellow {
             background-color: yellow;
         }
-        .falling {
-            position: absolute;
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            pointer-events: none;
-            animation: fall 0.5s ease-in forwards;
-        }
-        @keyframes fall {
-            from {
-                transform: translateY(-360px);
-            }
-            to {
-                transform: translateY(0);
-            }
-        }
         #status {
             font-size: 24px;
             margin: 20px 0;
@@ -109,6 +100,31 @@
                 transform: scale(1);
             }
         }
+        #scoreboard {
+            font-size: 28px;
+            color: #ff4500; /* Laranja */
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            margin: 10px 0;
+            font-weight: bold;
+            width: 470px;
+            text-align: center;
+        }
+        #loser-message {
+            font-size: 28px;
+            color: #ff4500; /* Laranja */
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            margin: 10px 0;
+            font-weight: bold;
+            width: 470px;
+            text-align: center;
+            display: none;
+        }
+        #loser-image {
+            width: 470px;
+            height: auto;
+            margin: 10px 0;
+            display: none;
+        }
         button {
             padding: 10px 20px;
             font-size: 18px;
@@ -133,6 +149,8 @@
         label {
             font-size: 18px;
             margin: 5px;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
         }
         #victory-video {
             display: none;
@@ -177,6 +195,9 @@
         <div id="board"></div>
         <button onclick="resetGame()">Reiniciar Jogo</button>
         <button onclick="backToStart()">Voltar ao Início</button>
+        <div id="scoreboard"></div>
+        <div id="loser-message"></div>
+        <img id="loser-image" src="https://e7.pngegg.com/pngimages/899/799/png-clipart-urdu-poetry-joke-hindi-love-humour-flesh-love-desktop-wallpaper-thumbnail.png" alt="Crying Emoji">
     </div>
     <video id="victory-video" src="fireworks.mp4" autoplay></video>
     <button id="close-video" style="display: none;" onclick="closeVideo()">Fechar Vídeo</button>
@@ -189,6 +210,9 @@
         let gameOver = false;
         let player1Name = '';
         let player2Name = '';
+        let player1Score = 0;
+        let player2Score = 0;
+        let isAnimating = false;
 
         // Iniciar o jogo
         function startGame() {
@@ -197,10 +221,16 @@
             board = [];
             currentPlayer = 'red';
             gameOver = false;
+            player1Score = 0;
+            player2Score = 0;
+            isAnimating = false;
             document.getElementById('start-screen').style.display = 'none';
             document.getElementById('game-screen').style.display = 'flex';
             document.getElementById('status').textContent = `Vez de ${player1Name} (Vermelho)`;
             document.getElementById('victory-message').style.display = 'none';
+            document.getElementById('loser-message').style.display = 'none';
+            document.getElementById('loser-image').style.display = 'none';
+            updateScoreboard();
             createBoard();
         }
 
@@ -224,7 +254,7 @@
 
         // Lidar com o clique na coluna
         function handleClick(col) {
-            if (gameOver) return;
+            if (gameOver || isAnimating) return;
             for (let row = rows - 1; row >= 0; row--) {
                 if (!board[row][col]) {
                     board[row][col] = currentPlayer;
@@ -234,38 +264,61 @@
             }
         }
 
-        // Animação de queda
-        function animateFall(row, col) {
-            const boardDiv = document.getElementById('board');
-            const cell = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
-            const fallingPiece = document.createElement('div');
-            fallingPiece.classList.add('falling', currentPlayer);
-            const cellRect = cell.getBoundingClientRect();
-            const boardRect = boardDiv.getBoundingClientRect();
-            fallingPiece.style.left = `${cellRect.left - boardRect.left}px`;
-            fallingPiece.style.top = `${cellRect.top - boardRect.top}px`;
-            boardDiv.appendChild(fallingPiece);
+        // Animação de queda sequencial
+        function animateFall(finalRow, col) {
+            isAnimating = true;
+            let currentRow = 0;
+            const delayPerRow = 75; // Tempo por linha em ms (mantido conforme seu ajuste)
+            const interval = setInterval(() => {
+                if (currentRow > finalRow) {
+                    clearInterval(interval);
+                    // Colocar a peça na posição final
+                    const finalCell = document.querySelector(`.cell[data-row="${finalRow}"][data-col="${col}"]`);
+                    finalCell.classList.add(currentPlayer);
+                    // Verificar vitória ou empate após animação
+                    if (checkWin(finalRow, col)) {
+                        const winner = currentPlayer === 'red' ? player1Name : player2Name;
+                        const loser = currentPlayer === 'red' ? player2Name : player1Name;
+                        if (currentPlayer === 'red') {
+                            player1Score++;
+                        } else {
+                            player2Score++;
+                        }
+                        document.getElementById('status').style.display = 'none';
+                        document.getElementById('victory-message').style.display = 'block';
+                        document.getElementById('victory-message').textContent = `🎉 PARABÉNS, ${winner}! VOCÊ É O SUPREMO CAMPEÃO DO 4 EM LINHA! 🏆`;
+                        document.getElementById('loser-message').style.display = 'block';
+                        document.getElementById('loser-message').textContent = `😭 ${loser} 😭`;
+                        document.getElementById('loser-image').style.display = 'block';
+                        updateScoreboard();
+                        gameOver = true;
+                        showVictoryVideo();
+                    } else if (checkDraw()) {
+                        document.getElementById('status').textContent = 'Empate!';
+                        gameOver = true;
+                    } else {
+                        currentPlayer = currentPlayer === 'red' ? 'yellow' : 'red';
+                        document.getElementById('status').textContent = `Vez de ${currentPlayer === 'red' ? player1Name : player2Name} (${currentPlayer === 'red' ? 'Vermelho' : 'Amarelo'})`;
+                    }
+                    isAnimating = false;
+                    return;
+                }
 
-            setTimeout(() => {
+                const cell = document.querySelector(`.cell[data-row="${currentRow}"][data-col="${col}"]`);
                 cell.classList.add(currentPlayer);
-                fallingPiece.remove();
-                if (checkWin(row, col)) {
-                    const winner = currentPlayer === 'red' ? player1Name : player2Name;
-                    document.getElementById('status').style.display = 'none';
-                    document.getElementById('victory-message').style.display = 'block';
-                    document.getElementById('victory-message').textContent = `🎉 PARABÉNS, ${winner}! VOCÊ É O SUPREMO CAMPEÃO DO 4 EM LINHA! 🏆`;
-                    gameOver = true;
-                    showVictoryVideo();
-                    return;
+
+                if (currentRow > 0) {
+                    const prevCell = document.querySelector(`.cell[data-row="${currentRow - 1}"][data-col="${col}"]`);
+                    prevCell.classList.remove(currentPlayer);
                 }
-                if (checkDraw()) {
-                    document.getElementById('status').textContent = 'Empate!';
-                    gameOver = true;
-                    return;
-                }
-                currentPlayer = currentPlayer === 'red' ? 'yellow' : 'red';
-                document.getElementById('status').textContent = `Vez de ${currentPlayer === 'red' ? player1Name : player2Name} (${currentPlayer})`;
-            }, 500); // Tempo da animação de queda (0.5s)
+
+                currentRow++;
+            }, delayPerRow);
+        }
+
+        // Atualizar placar
+        function updateScoreboard() {
+            document.getElementById('scoreboard').textContent = `${player1Name}: ${player1Score} | ${player2Name}: ${player2Score}`;
         }
 
         // Reproduzir vídeo de vitória
@@ -329,9 +382,12 @@
         function resetGame() {
             currentPlayer = 'red';
             gameOver = false;
+            isAnimating = false;
             board = [];
             document.getElementById('status').style.display = 'block';
             document.getElementById('victory-message').style.display = 'none';
+            document.getElementById('loser-message').style.display = 'none';
+            document.getElementById('loser-image').style.display = 'none';
             document.getElementById('status').textContent = `Vez de ${player1Name} (Vermelho)`;
             createBoard();
         }
@@ -345,8 +401,14 @@
             board = [];
             currentPlayer = 'red';
             gameOver = false;
+            isAnimating = false;
+            player1Score = 0;
+            player2Score = 0;
             document.getElementById('status').style.display = 'block';
             document.getElementById('victory-message').style.display = 'none';
+            document.getElementById('loser-message').style.display = 'none';
+            document.getElementById('loser-image').style.display = 'none';
+            document.getElementById('scoreboard').textContent = '';
         }
     </script>
 </body>

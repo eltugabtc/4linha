@@ -183,9 +183,9 @@
 <body>
     <h1>🤯 4 em Linha só para Einsteins Supremos 🤯</h1>
     <div id="start-screen">
-        <label for="player1">Nome do Jogador 1 (Vermelho):</label>
+        <label for="player1">Jogador 1 (Vermelho):</label>
         <input type="text" id="player1" placeholder="Jogador 1">
-        <label for="player2">Nome do Jogador 2 (Amarelo):</label>
+        <label for="player2">Jogador 2 (Amarelo):</label>
         <input type="text" id="player2" placeholder="Jogador 2">
         <button onclick="startGame()">Iniciar Jogo</button>
     </div>
@@ -219,14 +219,12 @@
             player1Name = document.getElementById('player1').value || 'Jogador 1';
             player2Name = document.getElementById('player2').value || 'Jogador 2';
             board = [];
-            currentPlayer = 'red';
+            currentPlayer = Math.random() < 0.5 ? 'red' : 'yellow'; // Sortear jogador inicial
             gameOver = false;
-            player1Score = 0;
-            player2Score = 0;
             isAnimating = false;
             document.getElementById('start-screen').style.display = 'none';
             document.getElementById('game-screen').style.display = 'flex';
-            document.getElementById('status').textContent = `Vez de ${player1Name} (Vermelho)`;
+            document.getElementById('status').textContent = `Vez de ${currentPlayer === 'red' ? player1Name : player2Name} (${currentPlayer === 'red' ? 'Vermelho' : 'Amarelo'})`;
             document.getElementById('victory-message').style.display = 'none';
             document.getElementById('loser-message').style.display = 'none';
             document.getElementById('loser-image').style.display = 'none';
@@ -268,7 +266,7 @@
         function animateFall(finalRow, col) {
             isAnimating = true;
             let currentRow = 0;
-            const delayPerRow = 75; // Tempo por linha em ms (mantido conforme seu ajuste)
+            const delayPerRow = 75; // Tempo por linha em ms
             const interval = setInterval(() => {
                 if (currentRow > finalRow) {
                     clearInterval(interval);
@@ -380,7 +378,7 @@
 
         // Reiniciar o jogo
         function resetGame() {
-            currentPlayer = 'red';
+            currentPlayer = Math.random() < 0.5 ? 'red' : 'yellow'; // Sortear jogador inicial
             gameOver = false;
             isAnimating = false;
             board = [];
@@ -388,7 +386,7 @@
             document.getElementById('victory-message').style.display = 'none';
             document.getElementById('loser-message').style.display = 'none';
             document.getElementById('loser-image').style.display = 'none';
-            document.getElementById('status').textContent = `Vez de ${player1Name} (Vermelho)`;
+            document.getElementById('status').textContent = `Vez de ${currentPlayer === 'red' ? player1Name : player2Name} (${currentPlayer === 'red' ? 'Vermelho' : 'Amarelo'})`;
             createBoard();
         }
 
